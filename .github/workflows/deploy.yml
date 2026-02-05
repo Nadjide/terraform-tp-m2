@@ -20,20 +20,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Convert owner to lowercase
+        run: |
+          echo "REPO_OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Build and push API
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./python.Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/api:latest
+          tags: ghcr.io/${{ env.REPO_OWNER }}/api:latest
 
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/frontend:latest
+          tags: ghcr.io/${{ env.REPO_OWNER }}/frontend:latest
 
   deploy:
     runs-on: ubuntu-latest

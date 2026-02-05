@@ -1,0 +1,54 @@
+---
+- name: Déploiement Production
+  hosts: web
+  become: true
+  vars:
+    project_dir: "/home/ubuntu/app"
+    # Ces variables doivent être passées via --extra-vars dans la CI
+    # gh_user: ""
+    # gh_token: ""
+    # image_repo: ""
+
+  tasks:
+    - name: Installation des dépendances
+      apt:
+        update_cache: yes
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+
+    - name: Ajout user au groupe docker
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Login au registre GHCR
+      docker_login:
+        registry: ghcr.io
+        username: "{{ gh_user }}"
+        password: "{{ gh_token }}"
+
+    - name: Création du dossier projet
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copie du docker-compose
+      copy:
+        src: ../docker-compose.prod.yml
+        dest: "{{ project_dir }}/docker-compose.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Démarrage de l'application
+      shell: |
+        export IMAGE_Repo={{ image_repo }}
+        docker compose up -d --pull always
+      args:
+        chdir: "{{ project_dir }}"

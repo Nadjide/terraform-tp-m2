@@ -1,0 +1,21 @@
+services:
+  web:
+    image: ${IMAGE_Repo}/frontend:latest
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  api:
+    image: ${IMAGE_Repo}/api:latest
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=db
+      # On met des valeurs par défaut pour éviter le crash
+      - POSTGRES_DB=test
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password

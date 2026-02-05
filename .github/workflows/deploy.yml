@@ -1,0 +1,84 @@
+name: Deploy to AWS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./python.Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/api:latest
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/frontend:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: read
+      packages: read
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: 'eu-west-3'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: infra
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: infra
+
+      - name: Get Terraform Outputs
+        id: infra
+        working-directory: infra
+        run: |
+          echo "SERVER_IP=$(terraform output -raw server_ip)" >> $GITHUB_ENV
+          terraform output -raw private_key > ../key.pem
+          chmod 600 ../key.pem
+
+      - name: Generate Inventory
+        run: |
+          echo "[web]" > inventory.ini
+          echo "$SERVER_IP ansible_user=ubuntu ansible_ssh_private_key_file=key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory.ini
+          cat inventory.ini
+
+      - name: Run Ansible Playbook
+        run: |
+          # Convert repository owner to lowercase for docker image url
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          
+          ansible-playbook -i inventory.ini ansible/deploy.yml \
+            --extra-vars "gh_user=${{ github.actor }} gh_token=${{ secrets.GITHUB_TOKEN }} image_repo=ghcr.io/$REPO_OWNER"

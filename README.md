@@ -53,7 +53,7 @@ Pour faire tourner ce projet, les secrets suivants doivent être configurés dan
 
 Une fois le pipeline terminé avec succès :
 1.  Récupérez l'adresse IP publique dans les logs de l'étape "Generate Inventory" ou "Get Terraform Outputs".
-2.  Accédez à l'application via `http://<IP_PUBLIQUE>`.
+2.  Accédez à l'application via `http://13.38.102.228`.
 
 ## Auteurs
 

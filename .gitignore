@@ -1,0 +1,17 @@
+.env
+.github/
+
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform.lock.hcl
+
+# Keys and secrets
+**/*.pem
+**/*.key
+**/registry-key-*.pem
+
+# OS/Editor
+.DS_Store
+Thumbs.db

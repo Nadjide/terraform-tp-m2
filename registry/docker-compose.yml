@@ -1,0 +1,26 @@
+services:
+  registry:
+    image: registry:2
+    ports:
+      - "8000:5000"
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    volumes:
+      - ./data:/var/lib/registry
+      - ./auth:/auth:ro
+
+  ui:
+    image: joxit/docker-registry-ui:main
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      - REGISTRY_TITLE=Ansible deployed registry
+      - REGISTRY_URL=http://{{ public_ip }}:8000
+      - SINGLE_REGISTRY=true
+      - DELETE_IMAGES=true
+    depends_on:
+      - registry
